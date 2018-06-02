@@ -62,7 +62,10 @@ module.exports = function App(config) {
   // Attach RouteManager to app object, the primary set of mockyeah API methods.
   app.routeManager = new RouteManager(app);
 
-  app.proxying = app.config.proxy;
+  app.proxying = app.config.proxy || true;
+
+  app.locals.recording = true;
+  app.locals.recordingSuiteName = 'mySuite';
 
   app.use('/', proxyRoute);
 
