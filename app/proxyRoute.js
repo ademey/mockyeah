@@ -1,5 +1,9 @@
+const fs = require('fs');
+const path = require('path');
+const mkdirp = require('mkdirp');
 const proxy = require('http-proxy-middleware');
 const isAbsoluteUrl = require('is-absolute-url');
+const { resolveFilePath } = require('./lib/helpers');
 
 module.exports = (req, res, next) => {
   if (!req.app.proxying) {
@@ -32,9 +36,16 @@ module.exports = (req, res, next) => {
           res.end('my response to cli');
         });
 
-        console.log('recording to: ', req.app.locals.recordingSuiteName);
+        const { capturesDir } = req.app.config;
+        console.log(req.app.config);
+        // const capturePath = path.join(capturesDir, req.app.locals.recordingSuiteName);
+        // const filePath = resolveFilePath(capturePath, reqUrl);
 
-        // proxyRes.pipe(require('fs').createWriteStream('./out.json'));
+        // console.log('recording to: ', filePath);
+
+        // mkdirp.sync(capturePath);
+
+        // proxyRes.pipe(fs.createWriteStream(filePath));
       }
     }
   });
