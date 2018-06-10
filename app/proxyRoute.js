@@ -37,15 +37,17 @@ module.exports = (req, res, next) => {
         });
 
         const { capturesDir } = req.app.config;
+
         console.log(req.app.config);
-        // const capturePath = path.join(capturesDir, req.app.locals.recordingSuiteName);
-        // const filePath = resolveFilePath(capturePath, reqUrl);
 
-        // console.log('recording to: ', filePath);
+        const capturePath = path.join(capturesDir, req.app.locals.recordingSuiteName);
+        const filePath = resolveFilePath(capturePath, reqUrl);
 
-        // mkdirp.sync(capturePath);
+        console.log('recording to: ', filePath);
 
-        // proxyRes.pipe(fs.createWriteStream(filePath));
+        mkdirp.sync(capturePath);
+
+        proxyRes.pipe(fs.createWriteStream(filePath));
       }
     }
   });
