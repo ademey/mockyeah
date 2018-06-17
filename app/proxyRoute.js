@@ -1,9 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const url = require('url');
 const mkdirp = require('mkdirp');
 const proxy = require('http-proxy-middleware');
 const isAbsoluteUrl = require('is-absolute-url');
 const { resolveFilePath } = require('./lib/helpers');
+
+const now = () => new Date().getTime();
 
 module.exports = (req, res, next) => {
   if (!req.app.proxying) {
@@ -18,6 +21,8 @@ module.exports = (req, res, next) => {
     return;
   }
 
+  const startTime = now();
+
   const middleware = proxy({
     target: reqUrl,
     changeOrigin: true,
@@ -25,29 +30,49 @@ module.exports = (req, res, next) => {
     ignorePath: true,
     onProxyRes: (proxyRes, req, res) => {
       if (req.app.locals.recording) {
-        // TODO: Record...
-        console.log('recording...', { proxyRes, req, res });
-        let body = '';
-        proxyRes.on('data', function(data) {
-          body += data;
-        });
-        proxyRes.on('end', function() {
-          console.log('res from proxied server:', body);
-          res.end('my response to cli');
-        });
-
         const { capturesDir } = req.app.config;
-
-        console.log(req.app.config);
 
         const capturePath = path.join(capturesDir, req.app.locals.recordingSuiteName);
         const filePath = resolveFilePath(capturePath, reqUrl);
 
-        console.log('recording to: ', filePath);
+        let body = '';
 
-        mkdirp.sync(capturePath);
+        proxyRes.on('data', function(data) {
+          body += data;
+        });
 
-        proxyRes.pipe(fs.createWriteStream(filePath));
+        proxyRes.on('end', function() {
+          mkdirp.sync(capturePath);
+
+          const parsedReqUrl = url.parse(reqUrl);
+
+          const { statusCode: status, _headers: headers } = res;
+
+          const latency = now() - startTime;
+
+          const toRecord = {
+            method: req.method.toUpperCase(),
+            url: reqUrl,
+            path: parsedReqUrl.path,
+            options: {
+              headers,
+              status,
+              raw: body,
+              latency
+            }
+          };
+
+          const json = JSON.stringify(toRecord, null, 2);
+
+          fs.writeFile(filePath, json, err => {
+            if (err) {
+              // TODO: Better error logging.
+              console.error('Error writing response', err, res);
+            }
+          });
+
+          res.end(body);
+        });
       }
     }
   });
